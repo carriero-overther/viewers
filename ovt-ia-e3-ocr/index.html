@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IDP local — visor</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ---- Tema: oscuro técnico. Solo estilos; la lógica (JS) no depende de esto. ---- */
+    :root {
+      --bg: #060a13;
+      --bg-2: #0a1020;
+      --panel: rgba(15, 23, 42, .72);
+      --panel-solid: #0e1628;
+      --panel-2: rgba(30, 41, 59, .55);
+      --line: rgba(148, 163, 184, .14);
+      --line-strong: rgba(148, 163, 184, .26);
+      --text: #e2e8f0;
+      --text-strong: #f8fafc;
+      --muted: #8b9bb4;
+      --accent: #22d3ee;
+      --accent-2: #8b5cf6;
+      --accent-soft: rgba(34, 211, 238, .12);
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --no: #f87171;
+      --grad: linear-gradient(90deg, var(--accent), var(--accent-2));
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --radius: 12px;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      color-scheme: dark;
+    }
+    * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+    html { background: var(--bg); }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text);
+      background:
+        radial-gradient(900px 500px at 85% -10%, rgba(139, 92, 246, .16), transparent 60%),
+        radial-gradient(800px 500px at -10% 110%, rgba(34, 211, 238, .10), transparent 60%),
+        linear-gradient(rgba(148, 163, 184, .045) 1px, transparent 1px) 0 0 / 32px 32px,
+        linear-gradient(90deg, rgba(148, 163, 184, .045) 1px, transparent 1px) 0 0 / 32px 32px,
+        var(--bg);
+      background-attachment: fixed;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.in { display: grid; grid-template-columns: 290px 1fr; min-height: 100vh; }
+    [hidden] { display: none !important; }
+    ::selection { background: rgba(34, 211, 238, .3); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ---- Barra lateral ---- */
+    body > aside {
+      background: linear-gradient(180deg, rgba(10, 16, 32, .92), rgba(6, 10, 19, .96));
+      border-right: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      color: var(--text); padding: 1.1rem .9rem; overflow-y: auto;
+      position: sticky; top: 0; height: 100vh; box-sizing: border-box;
+      align-self: start; overscroll-behavior: contain;
+    }
+    body > aside a {
+      color: var(--muted); text-decoration: none; display: block;
+      padding: .5rem .65rem; border-radius: 8px; font-size: .88rem;
+      border: 1px solid transparent; transition: background .15s, color .15s, border-color .15s;
+    }
+    body > aside a:hover { background: var(--panel-2); color: var(--text-strong); }
+    body > aside a.active {
+      background: var(--accent-soft); color: var(--text-strong);
+      border-color: rgba(34, 211, 238, .35);
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+    .nav { margin: 0 0 1.1rem; padding: 0 0 1rem; border-bottom: 1px solid var(--line); display: grid; gap: .15rem; }
+    .nav h2 {
+      margin: 0 0 .8rem; padding: 0 .35rem; font-size: .78rem; font-weight: 600;
+      font-family: var(--mono); letter-spacing: .14em; text-transform: uppercase;
+      display: flex; align-items: center; gap: .55rem; color: var(--text-strong);
+    }
+    .nav h2::before {
+      content: ""; width: 9px; height: 9px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 10px var(--accent), 0 0 2px var(--accent);
+    }
+    .nav a { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+    .badge {
+      font-family: var(--mono); font-size: .64rem; letter-spacing: .03em; color: var(--accent);
+      background: rgba(34, 211, 238, .08); border: 1px solid rgba(34, 211, 238, .22);
+      padding: .08rem .4rem; border-radius: 99px; white-space: nowrap; font-variant-numeric: tabular-nums;
+    }
+    .badge.run { color: var(--warn); background: rgba(251, 191, 36, .08); border-color: rgba(251, 191, 36, .25); }
+    .badge.ok { color: var(--ok); background: rgba(52, 211, 153, .08); border-color: rgba(52, 211, 153, .25); }
+    .badge.no { color: var(--no); background: rgba(248, 113, 113, .08); border-color: rgba(248, 113, 113, .25); }
+
+    /* ---- Contenido ---- */
+    main { padding: 1.75rem 2.25rem 3rem; min-width: 0; }
+    main h1, main h2 { color: var(--text-strong); letter-spacing: -.01em; }
+    .estado {
+      font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--muted);
+    }
+    body > aside .estado { color: var(--muted); }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; font-variant-numeric: tabular-nums; }
+    th, td { border-bottom: 1px solid var(--line); text-align: left; padding: .55rem .5rem; }
+    th {
+      color: var(--muted); font-size: .7rem; font-weight: 600; font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    td { font-size: .88rem; }
+    .ok { color: var(--ok); font-weight: 600; }
+    .warn { color: var(--warn); }
+    code {
+      font-family: var(--mono); font-size: .85em; color: var(--accent);
+      background: rgba(34, 211, 238, .08); border: 1px solid rgba(34, 211, 238, .16);
+      padding: .08rem .35rem; border-radius: 5px;
+    }
+    .resumen {
+      position: relative; background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 1.15rem 1.35rem; margin: 0 0 1.5rem;
+      backdrop-filter: blur(10px); overflow: hidden;
+    }
+    .resumen::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: var(--grad); opacity: .85; }
+    .resumen h1, .resumen h2 { margin: 0 0 .55rem; font-size: 1.2rem; font-weight: 600; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; margin: .75rem 0; }
+    .mini { width: 100%; margin-top: .5rem; }
+    .mini th, .mini td { font-size: .8rem; padding: .4rem .35rem; }
+    .conf-bar { height: 6px; background: rgba(148, 163, 184, .14); border-radius: 99px; overflow: hidden; min-width: 64px; }
+    .conf-bar > i { display: block; height: 100%; background: var(--grad); box-shadow: 0 0 8px rgba(34, 211, 238, .5); }
+    .conf-bar.warn > i { background: var(--warn); box-shadow: 0 0 8px rgba(251, 191, 36, .45); }
+    .kpi {
+      background: linear-gradient(180deg, rgba(30, 41, 59, .6), rgba(15, 23, 42, .6));
+      border: 1px solid var(--line); border-radius: 10px; padding: .75rem .85rem;
+      transition: border-color .2s, transform .2s;
+    }
+    .kpi:hover { border-color: rgba(34, 211, 238, .35); transform: translateY(-1px); }
+    .kpi b {
+      display: block; font-family: var(--mono); font-size: 1.3rem; font-weight: 600;
+      color: var(--text-strong); font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+    }
+    .kpi b.ok { color: var(--ok); text-shadow: 0 0 14px rgba(52, 211, 153, .35); }
+    .kpi b.warn { color: var(--warn); }
+    .kpi span { font-size: .74rem; color: var(--muted); }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .cols ul { margin: .3rem 0 0; padding-left: 1.1rem; }
+    .cols li { margin: .2rem 0; }
+    .bar { height: 8px; background: rgba(148, 163, 184, .14); border-radius: 99px; overflow: hidden; margin: .5rem 0 1rem; }
+    .bar > i { display: block; height: 100%; background: var(--grad); box-shadow: 0 0 12px rgba(34, 211, 238, .55); }
+    .bar.run > i { background: var(--warn); box-shadow: 0 0 12px rgba(251, 191, 36, .5); }
+    .tabla-wrap {
+      max-height: 62vh; overflow: auto; border: 1px solid var(--line);
+      border-radius: var(--radius); background: var(--panel); backdrop-filter: blur(10px);
+    }
+    .tabla-wrap table { margin: 0; }
+    .tabla-wrap thead th { position: sticky; top: 0; background: var(--panel-solid); z-index: 1; border-bottom-color: var(--line-strong); }
+    .tabla-wrap tbody tr { cursor: pointer; transition: background .12s; }
+    .tabla-wrap tbody tr:hover { background: rgba(34, 211, 238, .05); }
+    .tabla-wrap tbody tr.active { background: rgba(34, 211, 238, .12); box-shadow: inset 3px 0 0 var(--accent); }
+    .muted { color: var(--muted); }
+    .gold-ref { color: var(--muted); font-size: .8em; margin-top: .15rem; font-family: var(--mono); }
+    .lote-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(340px, 1fr); gap: 1rem; align-items: start; }
+    .captura {
+      border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+      backdrop-filter: blur(10px); padding: .95rem 1.1rem 1.1rem; max-height: 62vh; overflow: auto;
+    }
+    .captura h2 { margin: 0 0 .35rem; font-size: 1rem; color: var(--text-strong); }
+    .captura table { margin-top: .5rem; }
+    .formula {
+      margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--panel); padding: .95rem 1.1rem 1.1rem;
+    }
+    .formula p { margin: .35rem 0; font-size: .9rem; line-height: 1.5; }
+    .formula-eq {
+      margin: .45rem 0; padding: .65rem .8rem; background: rgba(2, 6, 15, .7);
+      border: 1px solid var(--line); border-left: 2px solid var(--accent); border-radius: 8px;
+      font-family: var(--mono); font-size: .8rem; line-height: 1.55; color: #a5f3fc; white-space: pre-wrap;
+    }
+
+    /* ---- Login ---- */
+    .login { min-height: 100vh; display: grid; place-items: center; padding: 1rem; box-sizing: border-box; }
+    .card {
+      position: relative; background: rgba(10, 16, 32, .82); backdrop-filter: blur(16px);
+      border: 1px solid var(--line-strong); border-radius: 16px;
+      padding: 2rem 1.9rem 1.6rem; width: min(400px, 100%); box-sizing: border-box;
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, .06), 0 30px 80px -20px rgba(0, 0, 0, .7), 0 0 60px -20px rgba(34, 211, 238, .25);
+    }
+    .card::before {
+      content: ""; position: absolute; inset: -1px -1px auto; height: 2px;
+      border-radius: 16px 16px 0 0; background: var(--grad);
+    }
+    .card .brand {
+      display: flex; align-items: center; gap: .6rem; margin-bottom: 1.3rem;
+      font-family: var(--mono); font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted);
+    }
+    .card .brand i {
+      width: 30px; height: 30px; border-radius: 8px; background: var(--grad);
+      display: grid; place-items: center; box-shadow: 0 0 18px rgba(34, 211, 238, .45);
+    }
+    .card .brand i::after { content: ""; width: 10px; height: 10px; border: 2px solid #060a13; border-radius: 3px; }
+    .card h1 { color: var(--text-strong); margin: 0 0 .4rem; font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+    .card .sub { color: var(--muted); font-size: .86rem; line-height: 1.5; margin: 0 0 .4rem; }
+    .card label {
+      display: block; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted); margin: 1rem 0 .35rem;
+    }
+    .card input {
+      width: 100%; box-sizing: border-box; padding: .7rem .8rem; font: inherit; font-size: .92rem;
+      border-radius: 9px; border: 1px solid var(--line-strong); background: rgba(2, 6, 15, .75); color: var(--text-strong);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .card input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 211, 238, .18); }
+    .card button {
+      margin-top: 1.35rem; width: 100%; padding: .75rem; border: 0; border-radius: 9px;
+      background: var(--grad); color: #04121a; font: inherit; font-weight: 700; font-size: .92rem;
+      letter-spacing: .02em; cursor: pointer; transition: filter .15s, transform .15s, box-shadow .15s;
+      box-shadow: 0 8px 24px -8px rgba(34, 211, 238, .6);
+    }
+    .card button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .card button:active { transform: translateY(0); }
+    .card .foot {
+      display: flex; align-items: center; gap: .45rem; margin: 1.2rem 0 0; padding-top: 1rem;
+      border-top: 1px solid var(--line); font-family: var(--mono); font-size: .66rem;
+      letter-spacing: .06em; color: var(--muted);
+    }
+    .card .foot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .err { color: var(--no); font-size: .84rem; min-height: 1.2em; margin: .6rem 0 0; }
+    .out {
+      color: var(--muted); font-family: var(--mono); font-size: .72rem; letter-spacing: .06em;
+      text-transform: uppercase; cursor: pointer; margin: .9rem .65rem 0; transition: color .15s;
+    }
+    .out:hover { color: var(--no); }
+
+    /* ---- Pantallas chicas ---- */
+    @media (max-width: 900px) {
+      body.in { grid-template-columns: 1fr; }
+      body > aside { position: static; height: auto; max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--line); }
+      main { padding: 1.25rem 1rem 2rem; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cols, .lote-grid { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div id="gate" class="login">
+    <form class="card" id="form">
+      <div class="brand"><i></i>IDP · Visor de resultados</div>
+      <h1>Acceso seguro</h1>
+      <p class="sub">Acceso para el comité. Los datos se descifran en tu navegador.</p>
+      <label for="user">Usuario</label>
+      <input id="user" name="user" autocomplete="username" required>
+      <label for="pass">Contraseña</label>
+      <input id="pass" name="pass" type="password" autocomplete="current-password" required>
+      <button type="submit">Entrar</button>
+      <p class="err" id="err"></p>
+      <p class="foot">AES-256-GCM · PBKDF2-SHA256 · descifrado local</p>
+    </form>
+  </div>
+  <aside id="aside" hidden>
+    <nav class="nav" id="nav"></nav>
+    <div id="side-note"></div>
+    <p class="out" id="out">Cerrar sesión</p>
+  </aside>
+  <main id="main" hidden></main>
+  <script>
+    const SPECS = {
+      lote: {
+        nav: "L1 · P01 · Frente",
+        blurb: "Frente 300 dpi. Resultado cerrado: no se borra al correr finger.",
+        done: "Terminó. Este es el resultado del load test.",
+        note: "Vista Parte 1 · Frente 1.251 (cerrada). No se borra.",
+        table: "Documentos parte 1 (frente)",
+        ids: "lt",
+        layout: "front",
+        gpu: "vram",
+        disclaimer: "Sin evaluación contra gold: no hay confianza oficial para esta corrida. El 87.2% de Homologación es otra corrida, evaluada vs gold.",
+        vramNote: "docling",
+        perfil: "Perfil front (300 dpi).",
+      },
+      finger: {
+        nav: "L1-finger · P02 · Huellas",
+        blurb: "Huellas 500 dpi. Vista aparte: no pisa la parte 1.",
+        done: "Terminó. Resultado de finger.",
+        note: "Vista Parte 2 · Finger. No pisa Parte 1 ni Parte 3.",
+        table: "Documentos parte 2 (finger)",
+        ids: "fg",
+        layout: "finger",
+        gpu: "finger",
+        disclaimer: "Sin evaluación contra gold: no hay confianza oficial para esta corrida.",
+        vramNote: "docling",
+        perfil: "Perfil finger (500 dpi). Mismo pipeline que la parte 1 (Docling + VL-7B + NLP 7B). No es YOLO.",
+      },
+      parte3: {
+        nav: "L1 · P03 · Frente (repetición)",
+        blurb: "Misma prueba de frente que Parte 1, IDs nuevos p3*. El bug NLP de braille ya está corregido. No borra Parte 1 ni Parte 2.",
+        done: "Terminó. Este es el resultado del load test.",
+        note: "Vista Parte 3 · Frente 1.251 (repetición). IDs p3*. No pisa Parte 1.",
+        table: "Documentos parte 3 (frente)",
+        ids: "p3",
+        layout: "front",
+        gpu: "vram",
+        disclaimer: "Sin evaluación contra gold: no hay confianza oficial para esta corrida. El 87.2% de Homologación es otra corrida, evaluada vs gold.",
+        vramNote: "docling",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte4: {
+        nav: "L1 · P04 · 2 GPU frente",
+        blurb: "Misma prueba de frente, ahora en 2× RTX PRO 6000: VL-7B en GPU 0, NLP-7B en GPU 1. RapidOCR de ROIs apagado. IDs p4*. No borra Partes 1–3 ni gold.",
+        done: "Terminó. Este es el resultado del load test.",
+        note: "Vista Parte 4 . 2 GPU Frente 1. IDs p4*. No pisa Parte 5.",
+        table: "Documentos parte 4 (frente, 2 GPU)",
+        ids: "p4",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "Sin evaluación contra gold: no hay confianza oficial para esta corrida. El 87.2% de Homologación es otra corrida, evaluada vs gold. Esta corrida es de throughput, no reevalúa gold.",
+        vramNote: "dual4",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte5: {
+        nav: "L1 · P05 · 2 GPU frente (repetición)",
+        blurb: "Repetición limpia de frente en 2× GPU (VL-7B + NLP-7B, ROIs apagados, sin huella). IDs p5*. No borra Parte 4 ni gold.",
+        done: "Terminó. Este es el resultado del load test.",
+        note: "Vista Parte 5 . 2 GPU Frente 2. IDs p5*. Corrida limpia; no pisa Parte 4.",
+        table: "Documentos parte 5 (frente, 2 GPU)",
+        ids: "p5",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "Sin evaluación contra gold: no hay confianza oficial para esta corrida. Corrida limpia: formulario_no por regex, sin huella_presente, sin reinicios a mitad.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte6: {
+        nav: "L1-finger · P06 · 2 GPU huellas",
+        blurb: "Load test finger 500 dpi en 2× GPU (mismo pipeline VL-7B + NLP-7B). IDs p6*. No borra Parte 2 (fg*) ni las pruebas de frente.",
+        done: "Terminó. Este es el resultado del load test.",
+        note: "Vista Parte 6 . 2 GPU Finger 1. IDs p6*. Perfil finger 500 dpi. No pisa Parte 2.",
+        table: "Documentos parte 6 (finger, 2 GPU)",
+        ids: "p6",
+        layout: "front",
+        gpu: "finger2",
+        disclaimer: "Esto no es YOLO de huellas. Es el mismo IDP (Docling + VL-7B + NLP) sobre las TIF finger. Parte 2 (fg*) queda como está.",
+        vramNote: "p6",
+        perfil: "Perfil finger (500 dpi).",
+      },
+      parte7: {
+        nav: "L1 · P07 · VL 32B",
+        blurb: "Frente 1.251 con Qwen2.5-VL-32B-Instruct-AWQ en GPU 0 y NLP 7B en GPU 1. IDs p7*. No borra Partes 4–6 ni gold.",
+        done: "Terminó. Este es el resultado del load test.",
+        note: "Vista Parte 7 . 2 GPU Front 32B. IDs p7*. VL-32B-AWQ + NLP 7B.",
+        table: "Documentos parte 7 (frente, VL-32B)",
+        ids: "p7",
+        layout: "front",
+        gpu: "vl32",
+        disclaimer: "El gold 100 con 32B ya midió CORE 83.8% (peor que 7B). Esta corrida es solo de throughput (sin gold), IDs p7* no pisan gold.",
+        vramNote: "p7",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte8: {
+        nav: "L1 · P08 · mejoras + casillas (87.8%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Vista Parte 8 . Confianza oficial 87.8% = promedio de la evaluación por celda vs gold. Sin genero ni estado_civil. IDs p8*.",
+        table: "Documentos parte 8 (frente, 2 GPU, mejoras)",
+        ids: "p8",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio de la evaluación externa por celda vs gold.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte9: {
+        nav: "L1 · P09 · gold_v2 teléfonos + discapacidad (88.9%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Vista Parte 9 . 88.9% = promedio vs gold_v2 (telefonos confirmados por foto). Misma corrida vs gold original: 87.7%. Discapacidad 82→90. IDs p9*.",
+        table: "Documentos parte 9 (frente, gold_v2 + NINGUNA)",
+        ids: "p9",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_v2. Parte 8 queda intacta.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte10: {
+        nav: "L1 · P10 · dígitos cédula + celular (89.6%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Vista Parte 10 . 89.6% = promedio vs gold_v2. Misma corrida vs gold original: 88.4%. Lector dedicado de digitos (recortes) con el mismo VL 7B; sin cuantizar. Cedula 86→88. IDs p10*.",
+        table: "Documentos parte 10 (frente, digitos vision)",
+        ids: "p10",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_v2. Parte 8 y Parte 9 quedan intactas.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte11: {
+        nav: "L1 · P11 · casillas NINGUNA≥2 + throughput (89.5%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Vista Parte 11 . 89.5% = promedio vs gold_v2. Misma corrida vs gold: 88.4%. NINGUNA si marcadas>=2; sin VL de fijo; prompt nombres/email. KPI plano vs Parte 10. IDs p11*.",
+        table: "Documentos parte 11 (frente, casillas + throughput)",
+        ids: "p11",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_v2. No reemplaza Parte 10 como mejor resultado.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      parte12: {
+        nav: "L1 · P12 · VL 3B dígitos/casillas, descartado (71.0%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Vista Parte 12 . 71.0% = promedio vs gold_v2. Misma corrida vs gold: 69.8%. Crops en Qwen2.5-VL-3B; pagina en 7B. Casillas colapsan; docs/h ~872 sin ganancia. Experimento descartado. IDs p12*.",
+        table: "Documentos parte 12 (frente, VL 3B crops)",
+        ids: "p12",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "Experimento. No usar como baseline. KPI oficial = promedio vs gold_v2.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      lote2p10: {
+        nav: "L2 · P10a · pipeline P10 tal cual (92.2%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Lote nuevo E3V2 (S3 forme3/E3V2/front_300, 267 frentes 300 dpi) con el pipeline Parte 10 tal cual, en servidor nuevo. 873 docs/h. KPI oficial 92.2% = promedio de conf_real por celda vs gold_e3 (267 docs, 4775 celdas). Lote y gold distintos a los de Parte 10 (89.6% vs gold_v2).",
+        table: "Documentos lote E3V2 (Parte 10)",
+        ids: "l2",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_e3. Casillas con 2+ marcas en el gold cuentan como vacío.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      lote2p10b: {
+        nav: "L2 · P10b · comunidad tapada (92.1%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Mismo lote E3V2 y mismo gold_e3. Unico cambio: en el recorte de discapacidad+etnia se pinta de blanco la caja A QUE COMUNIDAD DE LA ETNIA PERTENECE (un Ninguna manuscrito ahi se leia como discapacidad NINGUNA; caso 6000000041, ahora vacio = gold). KPI oficial 92.1% vs 92.2% de la corrida anterior: diferencia dentro del ruido entre corridas (~0.3 pts; etnia cambia ~30 celdas entre corridas identicas por el batching de vLLM).",
+        table: "Documentos lote E3V2 (Parte 10 + comunidad tapada)",
+        ids: "l2b",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_e3. Casillas con 2+ marcas en el gold cuentan como vacio.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      lote2p10c: {
+        nav: "L2 · P10c · comunidad_etnia (92.1%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Mismo lote E3V2 y gold_e3, con comunidad tapada en casillas y un campo nuevo: comunidad_etnia (A QUE COMUNIDAD DE LA ETNIA PERTENECE), leido con un recorte propio de la caja en el VL 7B. comunidad_etnia 95.3% conf_real. KPI oficial 92.1% con 19 campos; los 18 de antes 91.9%, dentro del ruido entre corridas (91.9-92.6). 10 frentes vienen con E-3 + E-4 en una pagina alta y ahi los recortes no caen en su caja.",
+        table: "Documentos lote E3V2 (Parte 10 + comunidad_etnia)",
+        ids: "l2c",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_e3 (19 campos). Casillas con 2+ marcas en el gold cuentan como vacio.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      lote2p10d: {
+        nav: "L2 · P10d · comunidad_etnia + solo E-3 (93.4%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Igual que el menu anterior (comunidad tapada + campo comunidad_etnia) y ademas: si el escaneo trae E-3 + E-4 en una misma pagina (alto > 1.05 x ancho), se procesa solo el E-3 de arriba con la proporcion de un E-3 normal. Fueron 10 de 267; en esos 10 el promedio paso de 72.2% a 92.5%. KPI oficial 93.4% (19 campos); los 18 de antes 93.2%.",
+        table: "Documentos lote E3V2 (Parte 10 + comunidad_etnia + solo E-3)",
+        ids: "l2d",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_e3 (19 campos). Casillas con 2+ marcas en el gold cuentan como vacio.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      lote2p10e: {
+        nav: "L2 · P10e · dirección sin inventos (93.2%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Igual que el menu anterior (comunidad tapada + comunidad_etnia + solo E-3) y ademas direccion: prompt sin ejemplos de complementos (Torre, Apto, Etapa), no se acepta un complemento que solo ve el recorte, y doble lectura del recorte: si no coinciden la direccion queda marcada revisar. Complementos inventados 3 -> 0 (caso 6000000075 'apto'). direccion 90.4% (antes 90.7%, ruido). KPI oficial 93.2% (19 campos), dentro del ruido del 93.4%.",
+        table: "Documentos lote E3V2 (Parte 10 + direccion sin inventos)",
+        ids: "l2e",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_e3 (19 campos). Direcciones con dos lecturas distintas quedan marcadas revisar.",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+      lote2p15: {
+        nav: "L2 · P15 · Qwen3.6-27B-FP8 dual (95.7%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "Mismo gold de 21 campos (267 frentes). VL Qwen3.6-27B-FP8 en dual (2 réplicas) + NLP 7B-AWQ. Logprobs reales (LP_UMBRAL=80) marcan revisar; DIR_NORMALIZAR unifica formato sin expandir tipo de vía. Baseline Parte 14: 92.4% → 95.7% conf_real, 934 docs/h.",
+        table: "Documentos lote E3V2 (Parte 15, Qwen3.6-27B-FP8 dual)",
+        ids: "l2p15",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (21 campos). revisar = conf_lp < 80 o doble lectura distinta (dirección/funcionario).",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi). Modelo VL FP8 dual.",
+      },
+      lote2p16: {
+        nav: "L2 · P16 · g4dn.metal 4× T4 · 27B-FP8 (95.5%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "Validación de compatibilidad para el Dell R740xd con 2× Quadro RTX 8000 (Turing). Mismo pipeline, modelos, revisiones e imagen vLLM que la Parte 15, en AWS g4dn.metal (8× Tesla T4 16 GB, misma arquitectura Turing sm_75). Cambios forzados por Turing: FP16 en vez de BF16, FP8 solo pesos (Marlin W8A16), atención TRITON_ATTN (sin FlashAttention 2), VL repartido en 4 GPUs (TP=4) por ser de 16 GB. Resultado: 95.5% conf_real vs 95.7% en Parte 15 (ruido); AUC conf_lp 92.0 igual; exactitud tras revisar 97.2% igual. Los docs/h (59.6) no representan al Dell: T4 es más lenta y TP=4 va por PCIe.",
+        table: "Documentos lote E3V2 (Parte 16, Turing, Qwen3.6-27B-FP8)",
+        ids: "l2p16",
+        layout: "front",
+        gpu: "turing",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (21 campos). revisar = conf_lp < 80 o doble lectura distinta (dirección/funcionario).",
+        vramNote: "turing",
+        perfil: "Perfil front (300 dpi). g4dn.metal · driver 580.178.04 · vLLM 0.29.0.",
+      },
+      lote2p16b: {
+        nav: "L2 · P16b · g4dn.metal 2× T4 · control VL 7B (92.6%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "Control de la Parte 16: pipeline Parte 15 con el VL Qwen2.5-VL-7B en Turing (FP16, TP=2 en 2× T4). Sirve para aislar el efecto del hardware: el mismo control en la Parte 15 dio 92.3%; en Turing 92.6%. formulario_no corregido por el nombre de archivo (prefijo de S3) antes de calcular el KPI.",
+        table: "Documentos lote E3V2 (Parte 16b, Turing, control 7B)",
+        ids: "l2p16b",
+        layout: "front",
+        gpu: "turing",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (21 campos).",
+        vramNote: "turing",
+        perfil: "Perfil front (300 dpi). g4dn.metal · driver 580.178.04 · vLLM 0.29.0.",
+      },
+      lote2p17: {
+        nav: "L2 · P17 · Dell 2× RTX 8000 · 27B-FP8, 1 réplica (95.6%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "Primera corrida en el servidor del cliente: Dell R740xd con 2× Quadro RTX 8000 48 GB (Turing sm_75), implementación imp-01, tarea B4.5. Mismo pipeline, modelos, revisiones e imagen vLLM que las Partes 15 y 16. Env turing-simple: una réplica del 27B-FP8 en GPU 0 (sin TP) y NLP 7B-AWQ en GPU 1. Resultado: 95.6% conf_real sobre los 267 (Parte 16: 95.5%; Parte 15: 95.7%), 0 errores; exactitud tras revisar 97.2%. 43.7 docs/h con una sola réplica (GPU 0 al 100%, GPU 1 casi libre): la etapa B5 prueba dos réplicas (turing-doble).",
+        table: "Documentos lote E3V2 (Parte 17, Dell RTX 8000, Qwen3.6-27B-FP8)",
+        ids: "l2p17",
+        layout: "front",
+        gpu: "dell",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (21 campos). revisar = conf_lp < 80 o doble lectura distinta (dirección/funcionario).",
+        vramNote: "dell",
+        perfil: "Perfil front (300 dpi). Dell R740xd · driver 580.178.04 open · vLLM 0.29.0 · código 06bd605.",
+      },
+      lote2p18: {
+        nav: "L2 · P18 · Dell 2× RTX 8000 · DeepSeek-OCR-2 solo (42.9%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "Prueba del modelo deepseek-ai/DeepSeek-OCR-2 como lector de página (implementación imp-02, modo solo) en el Dell R740xd. DeepSeek lee la página completa con el prompt \"Free OCR.\" y el NLP 7B-AWQ extrae los campos; sin recortes (casillas, dirección, dígitos, comunidad, funcionario) ni voto numérico. Resultado: 42.9% conf_real sobre los 267 (18 campos evaluados), 0 errores, 4 timeouts recuperados por reentrega. 105 docs/h. Cae en todos los campos, también en los que no dependen de recortes (nombres, fechas, ciudad, cédula): referencia P17 con Qwen3.6-27B-FP8 95.6%. Falta el modo híbrido (DeepSeek en la página + recortes con Qwen).",
+        table: "Documentos lote E3V2 (Parte 18, Dell RTX 8000, DeepSeek-OCR-2 solo)",
+        ids: "l2p18",
+        layout: "front",
+        gpu: "dell",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (18 campos: sin comunidad ni funcionario, que solo salen de recortes). revisar = conf_lp < 80.",
+        vramNote: "dell-ds",
+        perfil: "Perfil front (300 dpi). Dell R740xd · driver 580.178.04 open · vLLM 0.29.0 · imp-02 (código solo en el servidor).",
+      },
+      lote2p19: {
+        nav: "L2 · P19 · Dell 2× RTX 8000 · DeepSeek-OCR-2 híbrido (75.0%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "imp-02 en modo híbrido: DeepSeek-OCR-2 lee la página completa (\"Free OCR.\") y los recortes (casillas, dirección, dígitos, comunidad, funcionario) y el voto numérico siguen con Qwen3.6-27B-FP8, con los mismos flags que P17. Resultado: 75.0% conf_real sobre los 267 (21 campos), 0 errores; 33 documentos se reencolaron por timeout y se recuperaron. 50.7 docs/h (315 min). Los recortes levantan lo que leen ellos (casillas 99%+, cédula 91.0%, dirección 89.8%), pero lo que sale del texto de la página sigue bajo: fecha_inscripcion 34.8%, fecha_expedicion 18.0%, nombres 44-65%, ciudad 39.5%. Confirma que el problema es la lectura de la página manuscrita de DeepSeek. Referencia P17 (Qwen): 95.6%.",
+        table: "Documentos lote E3V2 (Parte 19, Dell RTX 8000, DeepSeek-OCR-2 híbrido)",
+        ids: "l2p19",
+        layout: "front",
+        gpu: "dell",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (21 campos). revisar = conf_lp < 80 o doble lectura distinta (dirección/funcionario).",
+        vramNote: "dell-ds-h",
+        perfil: "Perfil front (300 dpi). Dell R740xd · driver 580.178.04 open · vLLM 0.29.0 · imp-02 (código solo en el servidor).",
+      },
+      lote2p20: {
+        nav: "L2 · P20 · Dell 2× RTX 8000 · GLM-OCR solo (73.4%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "imp-03 en modo solo: zai-org/GLM-OCR (0,9B) lee la página completa (\"Text Recognition:\") y el NLP 7B-AWQ extrae los campos; sin recortes ni voto numérico. Resultado: 73.4% conf_real sobre los 267 (18 campos), 0 errores, 417.7 docs/h (38 min). A diferencia de DeepSeek (P18), los campos de texto quedan cerca de Qwen: fechas 92-93%, nombres y apellidos 93-95%, ciudad 94.9%, email 94.7%. Lo que baja el total: casillas sin recorte (nivel_estudio 3.7%, lee_braille 15.7%, etnia 21.3%) y formulario_no 7.1%, que es un error sistemático: en los 248 fallos GLM se come un cero (6000000030 → 600000030).",
+        table: "Documentos lote E3V2 (Parte 20, Dell RTX 8000, GLM-OCR solo)",
+        ids: "l2p20",
+        layout: "front",
+        gpu: "dell",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (18 campos: sin comunidad ni funcionario, que solo salen de recortes). revisar = conf_lp < 80.",
+        vramNote: "dell-glm",
+        perfil: "Perfil front (300 dpi). Dell R740xd · driver 580.178.04 open · vLLM 0.29.0 · imp-03 (código solo en el servidor).",
+      },
+      lote2p21: {
+        nav: "L2 · P21 · Dell 2× RTX 8000 · GLM-OCR híbrido (90.5%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "imp-03 en modo híbrido: GLM-OCR lee la página y los recortes y el voto numérico siguen con Qwen3.6-27B-FP8 (flags de P17). Resultado: 90.5% conf_real sobre los 267 (21 campos), 0 errores, 57.0 docs/h (281 min) contra 95.6% y 43.7 docs/h de P17. Casi toda la diferencia es formulario_no (7.1%): GLM se come un cero en los 248 fallos; corregido ese campo, el total daría ~94.9%. El resto de la brecha con P17: ciudad 94.9% vs 99.0%, fecha_expedicion 92.1% vs 95.9%, nombres y apellidos ~93% vs ~95-96%.",
+        table: "Documentos lote E3V2 (Parte 21, Dell RTX 8000, GLM-OCR híbrido)",
+        ids: "l2p21",
+        layout: "front",
+        gpu: "dell",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (21 campos). revisar = conf_lp < 80 o doble lectura distinta (dirección/funcionario).",
+        vramNote: "dell-glm-h",
+        perfil: "Perfil front (300 dpi). Dell R740xd · driver 580.178.04 open · vLLM 0.29.0 · imp-03 (código solo en el servidor).",
+      },
+      lote2p22: {
+        nav: "L2 · P22 · Dell 2× RTX 8000 · olmOCR-2 solo (89.6%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "imp-04 en modo solo: allenai/olmOCR-2-7B-1025 (Qwen2.5-VL-7B afinado para OCR) lee la página completa con su prompt de entrenamiento y la imagen a 1288 px; el NLP 7B-AWQ extrae los campos. Sin recortes ni voto numérico. Resultado: 89.6% conf_real sobre los 267 (18 campos), 0 errores, 644.2 docs/h (25 min): el más rápido de todas las pruebas. Es el mejor lector de página solo: formulario_no 99.3%, fechas 92-93%, nombres y apellidos 94-95%, ciudad 96.4%. A diferencia de DeepSeek y GLM, también lee casillas desde la página (lee_braille 92.9%, tipo_discapacidad 88.4%, nivel_estudio 73.4%, etnia 67.4%). Lo más flojo: numero_documento 83.1% y telefono_movil 73.4% sin el voto numérico.",
+        table: "Documentos lote E3V2 (Parte 22, Dell RTX 8000, olmOCR-2 solo)",
+        ids: "l2p22",
+        layout: "front",
+        gpu: "dell",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (18 campos: sin comunidad ni funcionario, que solo salen de recortes). revisar = conf_lp < 80.",
+        vramNote: "dell-olm",
+        perfil: "Perfil front (300 dpi). Dell R740xd · driver 580.178.04 open · vLLM 0.29.0 · imp-04 (código solo en el servidor).",
+      },
+      lote2p23: {
+        nav: "L2 · P23 · Dell 2× RTX 8000 · olmOCR-2 híbrido (94.9%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: false,
+        note: "imp-04 en modo híbrido: olmOCR-2 lee la página y los recortes y el voto numérico siguen con Qwen3.6-27B-FP8 (flags de P17). Resultado: 94.9% conf_real sobre los 267 (21 campos), 0 errores, 59.3 docs/h (270 min), contra 95.6% y 43.7 docs/h de P17: 0.7 puntos abajo y 36% más rápido. Iguala o supera a P17 en numero_documento (91.0% vs 90.3%) y telefono_movil (82.0% vs 80.5%); queda abajo en fecha_expedicion (91.8% vs 95.9%), fecha_inscripcion (91.8% vs 94.0%), ciudad (96.6% vs 99.0%) y direccion (93.1% vs 94.5%). Con revisión humana (conf_lp < 80): revisa 26.9% de las celdas y queda en 97.6% exacto tras revisar (P17: 21.8% y 97.1%).",
+        table: "Documentos lote E3V2 (Parte 23, Dell RTX 8000, olmOCR-2 híbrido)",
+        ids: "l2p23",
+        layout: "front",
+        gpu: "dell",
+        disclaimer: "KPI oficial = promedio vs gold_lote2 (21 campos). revisar = conf_lp < 80 o doble lectura distinta (dirección/funcionario).",
+        vramNote: "dell-olm-h",
+        perfil: "Perfil front (300 dpi). Dell R740xd · driver 580.178.04 open · vLLM 0.29.0 · imp-04 (código solo en el servidor).",
+      },
+      lote2p14: {
+        nav: "L2 · P14 · funcionario, 256 formularios (92.4%)",
+        blurb: "",
+        done: "",
+        hideMeta: true,
+        hideFoot: true,
+        note: "",
+        table: "Documentos lote E3V2 (Parte 14, con funcionario)",
+        ids: "l2p14",
+        layout: "front",
+        gpu: "dual",
+        disclaimer: "KPI oficial = promedio vs gold_e3 (21 campos, incluye funcionario_cedula y funcionario_nombre). revisar = dos lecturas distintas (nombre del funcionario y direccion).",
+        vramNote: "dual5",
+        perfil: "Perfil front (300 dpi).",
+      },
+    };
+    const PARTE_KEYS = ["lote", "finger", "parte3", "parte4", "parte5", "parte6", "parte7", "parte8", "parte9", "parte10", "parte11", "parte12", "lote2p10", "lote2p10b", "lote2p10c", "lote2p10d", "lote2p10e", "lote2p14", "lote2p15", "lote2p16", "lote2p16b", "lote2p17", "lote2p18", "lote2p19", "lote2p20", "lote2p21", "lote2p22", "lote2p23"];
+    let vault = null;
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+      );
+    }
+    function b64(s) {
+      const bin = atob(s);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+    async function deriveKey(user, pass, salt, iter) {
+      const enc = new TextEncoder();
+      const material = await crypto.subtle.importKey(
+        "raw", enc.encode(user + "\0" + pass), "PBKDF2", false, ["deriveKey"]
+      );
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" },
+        material,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["decrypt"]
+      );
+    }
+    async function unlock(user, pass) {
+      const wrap = await fetch("data/vault.json?v=lote2p23", { cache: "no-store" }).then((r) => {
+        if (!r.ok) throw new Error("no está vault.json");
+        return r.json();
+      });
+      const key = await deriveKey(user, pass, b64(wrap.s), wrap.iter);
+      const pt = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: b64(wrap.iv) },
+        key,
+        b64(wrap.ct)
+      );
+      return JSON.parse(new TextDecoder().decode(pt));
+    }
+    function currentKey() {
+      const h = (location.hash || "#home").replace("#", "") || "home";
+      if (h === "home" || h === "gold" || h === "pruebas") return h;
+      return SPECS[h] ? h : "home";
+    }
+    function dph(d) {
+      return d.docs_per_hour == null ? "—" : d.docs_per_hour;
+    }
+    function badgeParte(d) {
+      if (!d) return "";
+      if (d.estado === "corriendo" || d.estado === "encolando") return '<span class="badge run">en curso</span>';
+      if (d.estado === "listo") return '<span class="badge ok">listo</span>';
+      if (d.hay_lote) return '<span class="badge">' + esc(d.listo) + "/" + esc(d.jobs) + "</span>";
+      return "";
+    }
+    function renderNav(active) {
+      const p = vault.partes || {};
+      const gold = p.gold || {};
+      const lote = p.lote || {};
+      let pruebasBadge = "";
+      if (lote.estado === "listo") pruebasBadge = '<span class="badge ok">1.251</span>';
+      const links = [
+        ["home", "Homologación", ""],
+        ["gold", "Documentos gold", '<span class="badge">' + (gold.listo || 0) + "/" + (gold.jobs || 0) + "</span>"],
+        ["pruebas", "Pruebas", pruebasBadge],
+      ].concat(PARTE_KEYS.map((k) => [k, SPECS[k].nav, badgeParte(p[k])]));
+      document.getElementById("nav").innerHTML = "<h2>IDP local</h2>" + links.map(([k, label, badge]) =>
+        '<a href="#' + k + '" class="' + (k === active ? "active" : "") + '"><span>' + esc(label) + "</span>" + badge + "</a>"
+      ).join("");
+    }
+    function kpi(b, s, cls) {
+      return '<div class="kpi"><b' + (cls ? ' class="' + cls + '"' : "") + ">" + b + "</b><span>" + s + "</span></div>";
+    }
+    function gpuBox(d, mode) {
+      const v = d.vram || {};
+      if (mode === "dual") return kpi("2× 96 GB", "GPU0 VL-7B · GPU1 NLP-7B");
+      if (mode === "vl32") return kpi("VL-32B-AWQ", "GPU 0 · NLP 7B en GPU 1");
+      if (mode === "finger") return kpi("500 dpi", "perfil finger · IDs fg*");
+      if (mode === "finger2") return kpi("500 dpi", "perfil finger · 2× GPU");
+      if (mode === "turing") return kpi(esc(v.used_gb) + " / " + esc(v.total_gb) + " GB", "8× T4 16 GB (Turing) · nvidia-smi");
+      return kpi(esc(v.used_gb) + " / " + esc(v.total_gb) + " GB", esc(v.gpu || "") + " · nvidia-smi");
+    }
+    function vramFooter(d, mode) {
+      const v = d.vram || {};
+      if (mode === "dual4") return "Dos GPUs: VL ~83 GB en GPU 0, NLP ~40 GB en GPU 1. Docling no ocupa VRAM. RapidOCR de ROIs está apagado en esta corrida.";
+      if (mode === "dual5") return "Dos GPUs: VL ~83 GB en GPU 0, NLP ~40 GB en GPU 1. Docling no ocupa VRAM. RapidOCR de ROIs está apagado.";
+      if (mode === "p6") return "Dos GPUs: VL-7B GPU 0, NLP-7B GPU 1. Mismo stack que Parte 5, otras imágenes.";
+      if (mode === "p7") return "GPU 0 ~89 GB (32B-AWQ). GPU 1 NLP 7B. El 32B es más lento que el 7B; no se espera superar a Parte 5 en docs/h.";
+      if (mode === "dell-ds") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada RTX 8000 tiene 48 GB: GPU 0 = DeepSeek-OCR-2 (reserva 0,85 de la GPU), GPU 1 = NLP 7B.";
+      if (mode === "dell-ds-h") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada RTX 8000 tiene 48 GB: GPU 0 = Qwen 27B para recortes (0,92), GPU 1 = DeepSeek-OCR-2 (0,40) + NLP 7B (0,40).";
+      if (mode === "dell-glm") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada RTX 8000 tiene 48 GB: GPU 0 = GLM-OCR 0,9B (reserva 0,85, casi todo caché KV), GPU 1 = NLP 7B.";
+      if (mode === "dell-glm-h") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada RTX 8000 tiene 48 GB: GPU 0 = Qwen 27B para recortes (0,92), GPU 1 = GLM-OCR (0,30) + NLP 7B (0,40).";
+      if (mode === "dell-olm") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada RTX 8000 tiene 48 GB: GPU 0 = olmOCR-2 7B (reserva 0,85), GPU 1 = NLP 7B.";
+      if (mode === "dell-olm-h") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada RTX 8000 tiene 48 GB: GPU 0 = Qwen 27B para recortes (0,92), GPU 1 = olmOCR-2 7B (0,45) + NLP 7B (0,40).";
+      if (mode === "dell") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada RTX 8000 tiene 48 GB: GPU 0 = réplica del 27B, GPU 1 = NLP 7B (sobra espacio para una segunda réplica).";
+      if (mode === "turing") return "VRAM por GPU (nvidia-smi al levantar): " + (v.por_gpu || []).map((g) => "GPU " + g.idx + " " + (g.mib / 1024).toFixed(1) + " GB").join(" · ") + ". Cada T4 tiene 15 GB. En el Dell cada RTX 8000 tiene 48 GB: una réplica del 27B por GPU, sin TP.";
+      return "Total GPU ~" + (v.used_gb || "—") + " GB / " + (v.total_gb || "—") + " GB (" + (v.used_mib || "—") + " / " + (v.total_mib || "—") + " MiB). Docling y RapidOCR no ocupan VRAM.";
+    }
+    function estadoLine(d, spec) {
+      if (d.estado === "encolando") return "Encolando en Rabbit…";
+      if (d.estado === "corriendo") return "En curso — esta vista se actualiza sola.";
+      if (d.estado === "timeout") return "Terminó por timeout (quedaron docs en cola).";
+      return spec.done || "";
+    }
+    // Solo se muestran confianzas calculadas: conf_real (Python vs gold) y conf_lp (logprobs).
+    // La confianza que el modelo declara de sí mismo no es oficial y no se muestra.
+    const SIN_OFICIAL = "Sin confianza oficial: esta corrida no se evaluó contra gold. La confianza que declara el propio modelo no es oficial y no se muestra.";
+    function tieneExacto(campos) {
+      return (campos || []).some((c) => c.exacto != null);
+    }
+    function goldRows(campos) {
+      if (!campos || !campos.length) return "<tr><td colspan='3' class='muted'>Aún no hay comparación vs gold.</td></tr>";
+      return campos.map((c) => {
+        const realCls = c.conf_real >= 90 ? "ok" : "warn";
+        const bar = c.conf_real < 90 ? " warn" : "";
+        return "<tr><td>" + esc(c.etiqueta) + "</td><td class='" + realCls + "'>" + esc(c.conf_real) +
+          "%</td><td><div class='conf-bar" + bar + "'><i style='width:" + esc(c.conf_real) + "%'></i></div></td></tr>";
+      }).join("");
+    }
+    function confPanel(d) {
+      const g = d.gold_eval;
+      if (!g) return `<p class="estado">Confianza por campo</p><p class="muted">${SIN_OFICIAL}</p>`;
+      const v = g.veredictos || {};
+      const promedio = tieneExacto(g.campos);
+      const cabeza = "<th>Campo</th><th>" + (promedio ? "Promedio" : "Oficial") + "</th><th></th>";
+      const nota = promedio
+        ? ""
+        : "Oficial = coincidencia exacta con gold, normalizando espacios, acentos y mayúsculas. En cédula, teléfonos, fechas y casillas un solo carácter distinto ya invalida el dato. De los " + esc(g.comparaciones) + " pares: " + esc(v.exacto || 0) + " exactos, " + esc(v.casi || 0) + " recuperables (≥" + esc(g.umbral_casi) + "% de similitud), " + esc(v.distinto || 0) + " distintos.";
+      return `<p class="estado">${promedio ? "Confianza oficial por campo (promedio de la celda vs gold)" : "Confianza oficial por campo (evaluación externa vs gold)"}</p>
+              <table class="mini">
+                <thead><tr>${cabeza}</tr></thead>
+                <tbody>${goldRows(g.campos)}</tbody>
+              </table>
+              ${nota ? `<p class="estado" style="margin:.5rem 0 0">${nota}</p>` : ""}`;
+    }
+    function confNota(d, spec) {
+      const g = d.gold_eval;
+      if (!g) return esc(spec.disclaimer);
+      if (tieneExacto(g.campos)) return "";
+      return "<b>Confianza oficial</b>: evaluación <b>externa al pipeline</b>, comparando cada campo " +
+        "contra <code>gold.json</code> (" + esc(g.comparaciones) + " pares / " + esc(g.gold_docs) +
+        " docs). Oficial de esta corrida: <b>" + esc(g.conf_real) + "%</b>.";
+    }
+    function modelRows(modelos) {
+      return (modelos || []).map((m) =>
+        "<tr><td><code>" + esc(m.nombre) + "</code></td><td>" + esc(m.rol) + "</td><td>" + esc(m.donde) + "</td><td>" + esc(m.vram) + "</td></tr>"
+      ).join("");
+    }
+    function formulaOficial() {
+      return `<div class="formula">
+        <p class="estado">Cómo se calcula Oficial (vs gold)</p>
+        <p>Gold y lectura se normalizan antes de comparar: minúsculas, sin tildes y espacios repetidos colapsados.</p>
+        <pre class="formula-eq">nota de la celda =
+  100         si el texto normalizado es igual
+  0           si no es igual y el campo es estricto
+  similitud   si no es igual y el campo es de texto</pre>
+        <p>Estrictos: número de formulario, fechas, tipo y número de documento, nivel de estudio, teléfonos, braille, discapacidad y etnia. Un carácter distinto pone la celda en 0.</p>
+        <p>Texto: apellidos, nombres, correo, ciudad y dirección.</p>
+        <p class="estado">expresion regular</p>
+        <pre class="formula-eq">similitud = redondeo( 100 × 2 × caracteres que coinciden / (largo del gold + largo de la lectura) )</pre>
+        <p>Ejemplo: gold Cra 93 B # 72-32 y lectura cra 93 a # 72-32 no es 0. Casi todo el texto coincide, así que esa celda queda cerca de 94.</p>
+        <pre class="formula-eq">porcentaje del formulario = promedio de las notas de sus celdas
+87,8% del lote = suma de las 1.800 notas / 1.800</pre>
+      </div>`;
+    }
+    function capturaHtml(conGold) {
+      return `<div class="captura" id="captura">
+        <h2 id="cap-titulo">Captura</h2>
+        <p class="estado" id="cap-estado">Sin documento</p>
+        <p id="cap-ruta" class="muted">Clic en una fila de la izquierda.</p>
+        <p class="warn" id="cap-error" hidden></p>
+        <table>
+          <thead><tr><th>Etiqueta</th><th>Valor capturado</th><th>Oficial (vs gold)</th></tr></thead>
+          <tbody id="cap-campos"><tr><td colspan="3" class="muted">Todavía no hay un registro seleccionado.</td></tr></tbody>
+        </table>
+        ${conGold ? '<p class="estado" style="margin:.5rem 0 0">Cuando el valor no coincide con el gold aparece debajo la transcripción de referencia. El porcentaje de esta columna es la evaluación externa: 100 si coincide exacto con gold; si no, la similitud, y 0 en campos donde un carácter distinto ya invalida el dato.</p>' : ""}
+      </div>`;
+    }
+    function bindCaptura(d) {
+      const byId = Object.fromEntries((d.rows || []).map((r) => [String(r.id), r]));
+      const body = document.getElementById("rows");
+      if (!body) return;
+      body.addEventListener("click", (ev) => {
+        const tr = ev.target.closest("tr[data-id]");
+        if (!tr) return;
+        document.querySelectorAll("#rows tr").forEach((x) => x.classList.toggle("active", x === tr));
+        showCampos(byId[tr.getAttribute("data-id")]);
+      });
+    }
+    function showCampos(doc) {
+      if (!doc) return;
+      document.getElementById("cap-titulo").textContent = doc.id || "Captura";
+      document.getElementById("cap-estado").textContent = doc.estado || "";
+      const ruta = document.getElementById("cap-ruta");
+      ruta.innerHTML = doc.ruta ? ("Ruta: <code>" + esc(doc.ruta) + "</code>") : "";
+      const err = document.getElementById("cap-error");
+      if (doc.error) { err.hidden = false; err.textContent = doc.error; }
+      else { err.hidden = true; err.textContent = ""; }
+      const list = doc.campos || [];
+      const tbody = document.getElementById("cap-campos");
+      if (!list.length) {
+        tbody.innerHTML = "<tr><td colspan='3' class='muted'>Aún no hay campos (OCR/NLP en curso).</td></tr>";
+        return;
+      }
+      tbody.innerHTML = list.map(campoRow).join("");
+    }
+    function campoRow(c) {
+      const val = (c.valor === 0 || c.valor) ? c.valor : "—";
+      let celdaValor = esc(val);
+      let celdaConf;
+      if (c.revisar) {
+        const por = Array.isArray(c.revisar_por) && c.revisar_por.length
+          ? " · " + esc(c.revisar_por.join(", "))
+          : "";
+        const lp = c.conf_lp != null ? " · conf_lp " + esc(c.conf_lp) + "%" : "";
+        celdaValor += "<div class='gold-ref'><span class='warn'>revisar</span>" + por + lp +
+          (c.segunda_lectura ? " · 2ª lectura: " + esc(c.segunda_lectura) : "") + "</div>";
+      } else if (c.conf_lp != null) {
+        celdaValor += "<div class='gold-ref muted'>conf_lp " + esc(c.conf_lp) + "%</div>";
+      }
+      if (c.conf_real != null) {
+        // siempre visible (antes solo si no coincidía): gris si coincide, valor en ámbar si no
+        const g = esc((c.gold === 0 || c.gold) ? c.gold : "(vacío)");
+        celdaValor += "<div class='gold-ref'>— gold: " + (c.veredicto === "exacto" ? g : "<span class='warn'>" + g + "</span>") + "</div>";
+        const realCls = c.veredicto === "exacto" ? "ok" : "warn";
+        celdaConf = "<td" + (c.veredicto ? " title='" + esc(c.veredicto) + "'" : "") +
+          " class='" + realCls + "'>" + esc(c.conf_real) + "%</td>";
+      } else {
+        celdaConf = "<td class='muted' title='sin gold para esta celda'>—</td>";
+      }
+      return "<tr><td>" + esc(c.etiqueta) + "</td><td>" + celdaValor + "</td>" + celdaConf + "</tr>";
+    }
+    function rowHtml(r) {
+      let conf = "";
+      if (r.en_proceso) conf = '<span class="muted">en proceso</span>';
+      else if (String(r.estado || "").startsWith("error")) conf = '<span class="warn">error</span>';
+      else if (r.conf_real != null) {
+        conf = '<span class="' + (r.conf_real >= 90 ? "ok" : "warn") + '">' + esc(r.conf_real) + "%</span>";
+      } else {
+        conf = '<span class="muted" title="sin gold">—</span>';
+      }
+      return "<tr data-id='" + esc(r.id) + "'><td>" + esc(r.n) + "</td><td>" + esc(r.formulario) + "</td><td>" +
+        esc(r.estado_label) + "</td><td>" + conf + "</td><td class='muted'>" + esc(r.hora || "—") + "</td></tr>";
+    }
+    function renderParte(key) {
+      const spec = SPECS[key];
+      const d = vault.partes[key] || {};
+      const modelos = d.modelos || [];
+      document.getElementById("side-note").innerHTML = spec.note ? '<p class="estado">' + esc(spec.note) + "</p>" : "";
+      const metaCls = d.cumple_meta ? "ok" : "warn";
+      let kpis = "";
+      if (spec.layout === "finger") {
+        kpis = `<div class="kpis">
+          ${kpi(esc(d.listo) + "/" + esc(d.jobs), "listos (<span>" + esc(d.pct) + "</span>%)")}
+          ${kpi(esc(dph(d)), "docs/h")}
+          ${kpi(esc(d.elapsed_fmt), "tiempo transcurrido")}
+          ${kpi(esc(d.errores), "errores")}
+        </div>
+        <div class="kpis">
+          ${kpi("—", "sin confianza oficial (no hay gold)")}
+          ${kpi(esc(d.cola), "en cola / proceso")}
+          ${gpuBox(d, spec.gpu)}
+        </div>`;
+      } else {
+        kpis = `<div class="kpis">
+          ${kpi(esc(d.listo) + "/" + esc(d.jobs), "listos (<span>" + esc(d.pct) + "</span>%)")}
+          ${kpi(esc(dph(d)), "docs/h (meta " + esc(d.meta) + ")")}
+          ${kpi(esc(d.elapsed_fmt), "tiempo transcurrido")}
+          ${spec.hideMeta ? "" : kpi(d.cumple_meta ? "sí" : "no", "cumple ≥ " + esc(d.meta) + " docs/h", metaCls)}
+        </div>
+        <div class="kpis">
+          ${kpi(esc(d.errores), "errores OCR/NLP")}
+          ${kpi(esc(d.cola), "aún en cola / proceso")}
+          ${kpi(esc(d.concurrency || "—"), "POSTs concurrentes")}
+          ${kpi(esc(d.workers || "3 OCR + 2 NLP"), "workers (prefetch=1)")}
+        </div>
+        <div class="kpis">
+          ${d.gold_eval
+            ? kpi(esc(d.gold_eval.conf_real) + "%", tieneExacto((d.gold_eval || {}).campos) ? "confianza oficial (promedio de la celda vs gold)" : "confianza oficial (evaluación externa vs gold)", (d.gold_eval.conf_real || 0) >= 90 ? "ok" : "warn")
+            : kpi("—", "sin confianza oficial (no hay gold)")}
+          ${kpi(esc(d.gold_eval ? d.gold_eval.gold_docs : 0), "docs gold en la evaluación")}
+          ${gpuBox(d, spec.gpu)}
+          ${kpi(String(modelos.length), "motores en este pipeline")}
+        </div>
+        ${d.gold_eval ? `<div class="kpis">
+          ${kpi(esc(d.gold_eval.comparaciones), "pares campo a campo vs gold")}
+          ${tieneExacto(d.gold_eval.campos) ? "" : kpi(esc((d.gold_eval.veredictos || {}).exacto || 0), "pares exactos")}
+          ${kpi(esc((d.gold_eval.veredictos || {}).casi || 0), tieneExacto(d.gold_eval.campos) ? "pares casi (similitud alta)" : "pares casi (similitud alta, no exactos)")}
+          ${kpi(esc((d.gold_eval.veredictos || {}).distinto || 0), "pares distintos")}
+        </div>` : ""}`;
+      }
+      const running = d.estado === "corriendo" || d.estado === "encolando";
+      document.getElementById("main").innerHTML = `
+        <section class="resumen">
+          <h1>${esc(d.titulo || spec.nav)}</h1>
+          ${spec.blurb ? `<p class="estado">${esc(spec.blurb)}</p>` : ""}
+          ${estadoLine(d, spec) ? `<p>${esc(estadoLine(d, spec))}</p>` : ""}
+          <div class="bar${running ? " run" : ""}"><i style="width:${esc(d.pct || 0)}%"></i></div>
+          ${kpis}
+          ${confNota(d, spec) ? `<p class="estado">${confNota(d, spec)}</p>` : ""}
+          <div class="cols">
+            <div>
+              ${confPanel(d)}
+            </div>
+            <div>
+              <p class="estado">Modelos y VRAM</p>
+              <table class="mini">
+                <thead><tr><th>Modelo</th><th>Rol</th><th>Dónde</th><th>VRAM</th></tr></thead>
+                <tbody>${modelRows(modelos)}</tbody>
+              </table>
+              ${spec.hideFoot ? "" : `<p class="estado" style="margin:.5rem 0 0">${esc(vramFooter(d, spec.vramNote))}</p>`}
+            </div>
+          </div>
+          ${spec.hideFoot ? "" : `<p class="estado">IDs <code>${esc(spec.ids)}${esc(d.stamp || "")}-*</code>${d.meta ? " · Meta cliente ≥" + esc(d.meta) + " docs/h." : ""} ${esc(spec.perfil)}</p>`}
+        </section>
+        <div class="lote-grid">
+          <div>
+            <h2 style="margin:0 0 .4rem;font-size:1rem">${esc(spec.table)}</h2>
+            <p class="estado" style="margin:0 0 .6rem">Clic en un registro para ver la captura. Primera procesada arriba.</p>
+            <div class="tabla-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Formulario</th><th>Estado</th><th>Oficial (vs gold)</th><th>Hora</th></tr></thead>
+                <tbody id="rows">${(d.rows || []).map(rowHtml).join("")}</tbody>
+              </table>
+            </div>
+          </div>
+          ${capturaHtml(!!d.gold_eval)}
+        </div>
+        ${d.gold_eval && tieneExacto(d.gold_eval.campos) ? formulaOficial() : ""}`;
+      bindCaptura(d);
+    }
+    function renderHome() {
+      const r = vault.resumen || {};
+      const gold = vault.partes.gold || {};
+      document.getElementById("side-note").innerHTML = '<p class="estado">Elegí un menú. Gold = calidad. Parte 1 / Parte 2 = pruebas.</p>';
+      document.getElementById("main").innerHTML = `
+        <section class="resumen">
+          <h2>Estado homologación v2 — ${esc(r.fecha)}</h2>
+          <p>${esc(r.imagenes)}</p>
+          <div class="kpis">
+            ${kpi(esc(r.score_core), "calidad core (meta " + esc(r.meta_calidad) + ")")}
+            ${kpi(esc(gold.listo) + "/" + esc(gold.jobs), "docs gold listos")}
+            ${kpi(esc(r.vram), "VRAM g7e (vLLM 7B AWQ)")}
+            ${kpi(esc(r.throughput), "pico meta " + esc(r.meta_pico))}
+          </div>
+          <div class="cols">
+            <div><p class="estado">Hecho</p><ul>${(r.hecho || []).map((x) => "<li>" + esc(x) + "</li>").join("")}</ul></div>
+            <div><p class="estado">Falta</p><ul>${(r.falta || []).map((x) => "<li>" + esc(x) + "</li>").join("")}</ul></div>
+          </div>
+          <p class="estado" style="margin:.75rem 0 0">
+            Score anterior: ${esc(r.score_prev)} → ahora ${esc(r.score_core)}.
+            Pruebas: ${PARTE_KEYS.map((k) => '<a href="#' + k + '">' + esc(SPECS[k].nav) + "</a>").join(" · ")}.
+          </p>
+        </section>`;
+    }
+    function renderPruebas() {
+      document.getElementById("side-note").innerHTML = '<p class="estado">Clic Parte 1 a 7: cada una abre su vista.</p>';
+      const line = (k) => {
+        const d = vault.partes[k] || {};
+        return '<p><a href="#' + k + '">' + esc(SPECS[k].nav) + "</a> — " +
+          esc(d.listo) + "/" + esc(d.jobs) + " listos · " + esc(dph(d)) + " docs/h · " + esc(d.errores) + " errores</p>";
+      };
+      document.getElementById("main").innerHTML =
+        "<h1>Pruebas</h1><p class='estado'>Cada ítem del menú abre su propia vista. No están apiladas en esta página.</p>" +
+        PARTE_KEYS.map(line).join("");
+    }
+    function renderGold() {
+      const d = vault.partes.gold || {};
+      const rows = d.rows || [];
+      document.getElementById("side-note").innerHTML =
+        '<p class="estado">100 frentes (gold)</p>' +
+        rows.map((r) => '<a href="#gold" data-gid="' + esc(r.id) + '">' + esc(r.id) +
+          '<br><span class="estado">' + esc(r.estado) + "</span></a>").join("");
+      document.getElementById("main").innerHTML = '<p class="estado">Elegí un documento gold a la izquierda.</p>';
+      document.getElementById("side-note").addEventListener("click", (ev) => {
+        const a = ev.target.closest("a[data-gid]");
+        if (!a) return;
+        ev.preventDefault();
+        document.querySelectorAll("#side-note a").forEach((x) => x.classList.toggle("active", x === a));
+        const doc = rows.find((r) => String(r.id) === a.getAttribute("data-gid"));
+        if (!doc) return;
+        const list = doc.campos || [];
+        document.getElementById("main").innerHTML = `
+          <h1>${esc(doc.id)}</h1>
+          <p class="estado">${esc(doc.estado)}</p>
+          <p>Ruta: <code>${esc(doc.ruta || "")}</code></p>
+          ${doc.error ? '<p class="warn">Error: ' + esc(doc.error) + "</p>" : ""}
+          <table>
+            <thead><tr><th>Etiqueta</th><th>Valor</th><th>Oficial (vs gold)</th></tr></thead>
+            <tbody>${list.length ? list.map(campoRow).join("") : "<tr><td colspan='3'>Aún no hay campos.</td></tr>"}</tbody>
+          </table>`;
+      });
+    }
+    function go() {
+      const key = currentKey();
+      renderNav(key);
+      if (key === "home") renderHome();
+      else if (key === "pruebas") renderPruebas();
+      else if (key === "gold") renderGold();
+      else renderParte(key);
+    }
+    function showApp() {
+      document.getElementById("gate").hidden = true;
+      document.getElementById("aside").hidden = false;
+      document.getElementById("main").hidden = false;
+      document.body.classList.add("in");
+      window.addEventListener("hashchange", go);
+      go();
+    }
+    document.getElementById("form").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const err = document.getElementById("err");
+      err.textContent = "Abriendo…";
+      try {
+        vault = await unlock(
+          document.getElementById("user").value.trim(),
+          document.getElementById("pass").value
+        );
+        showApp();
+      } catch (e) {
+        err.textContent = "Usuario o contraseña incorrectos.";
+      }
+    });
+    document.getElementById("out").addEventListener("click", () => {
+      vault = null;
+      location.hash = "";
+      location.reload();
+    });
+  </script>
+</body>
+</html>
