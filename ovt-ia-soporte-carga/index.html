@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Prueba de carga · Soporte campo</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --ink: #1c2330; --muted: #5d6778; --line: #e2e6ec;
+    --accent: #2f6fdb; --ok: #1f8a4c; --warn: #b7791f; --bad: #c0392b; --soft: #eef3fc;
+    --grid: #e9ecf1; --dot: #2f6fdb; --dot2: #8a5cf6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11151c; --card: #191f29; --ink: #e6e9ef; --muted: #98a2b3; --line: #2a3240;
+      --accent: #6ea0ff; --ok: #3fbf74; --warn: #e0a640; --bad: #ef6b5b; --soft: #1e2838;
+      --grid: #253041; --dot: #6ea0ff; --dot2: #b19cff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 16px; }
+  .login { max-width: 380px; margin: 12vh auto; }
+  .login label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  .login input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+  button { margin-top: 16px; width: 100%; padding: 10px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  .err { color: var(--bad); min-height: 20px; margin-top: 10px; font-size: 14px; }
+  .foot { font-size: 12px; color: var(--muted); margin-top: 14px; text-align: center; }
+  ul.concl { margin: 0; padding-left: 18px; }
+  ul.concl li { margin: 6px 0; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.run { cursor: pointer; }
+  tr.run:hover td { background: var(--soft); }
+  tr.sel td { background: var(--soft); font-weight: 600; }
+  .good { color: var(--ok); } .meh { color: var(--warn); } .bad { color: var(--bad); }
+  .star { color: var(--warn); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 4px; }
+  .kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .kpi .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .l { font-size: 12px; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin: 6px 0 14px; }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .note { background: var(--soft); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 14px; margin-top: 8px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; border: 1px solid var(--line); }
+  .pill.ok { color: var(--ok); border-color: currentColor; } .pill.fail { color: var(--bad); border-color: currentColor; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 6px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .legend i.line { border-radius: 0; height: 2px; width: 14px; vertical-align: 3px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <form id="login" class="card login" autocomplete="on">
+    <h1>Prueba de carga</h1>
+    <div class="muted small">Soporte inscripción en campo · agente de voz</div>
+    <label for="user">Usuario</label>
+    <input id="user" name="user" autocomplete="username" required>
+    <label for="pass">Contraseña</label>
+    <input id="pass" name="pass" type="password" autocomplete="current-password" required>
+    <button type="submit" id="go">Entrar</button>
+    <div class="err" id="err"></div>
+    <p class="foot">AES-256-GCM · PBKDF2-SHA256 · descifrado local</p>
+  </form>
+
+  <main id="app" class="hidden">
+    <h1 id="title"></h1>
+    <div class="muted" id="goal"></div>
+    <div class="muted small" id="gen"></div>
+
+    <section class="card">
+      <h2>Conclusiones</h2>
+      <ul class="concl" id="concl"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Corridas</h2>
+      <div class="muted small" style="margin:-6px 0 10px">Tocá una fila para ver el detalle. Objetivo: turno p95 ≤ 2,5 s y todas las llamadas ok.</div>
+      <div class="tablewrap"><table id="runs"></table></div>
+    </section>
+
+    <section class="card" id="detail"></section>
+
+    <section class="card small muted">
+      <h2 style="color:var(--ink)">Cómo leer</h2>
+      <ul class="concl">
+        <li><b>Turno</b>: desde que el operador (robot) termina de hablar hasta que el agente empieza a responder. Incluye la pausa que espera el agente para saber que terminó (~0,5 s), el reconocimiento de voz, el clasificador, el núcleo y la voz.</li>
+        <li><b>Saludo</b>: desde que el robot entra a la sala hasta que el agente empieza a hablar. 0 s = el agente ya estaba hablando cuando el robot terminó de conectarse.</li>
+        <li><b>Audio conectado</b>: desde que el robot entra hasta que recibe el audio del agente. El agente no habla hasta que alguien lo escucha.</li>
+        <li><b>CPU</b>: uso de la máquina del agente cada 2 s. Por encima de 70 % el worker deja de aceptar llamadas nuevas.</li>
+        <li><b>Ramp</b>: pausa entre una llamada y la siguiente. 0 = todas en el mismo segundo.</li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const TARGET = 2.5;
+  const CPU_LIMIT = 70;
+  let vault = null;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (v, d = 2) => (v == null ? "—" : Number(v).toFixed(d).replace(".", ","));
+  const sec = (v) => (v == null ? "—" : fmt(v) + " s");
+  const cls = (v, good, meh) => (v == null ? "" : v <= good ? "good" : v <= meh ? "meh" : "bad");
+
+  function b64(s) {
+    const bin = atob(s); const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  async function unlock(user, pass) {
+    const wrap = await fetch("data/vault.json", { cache: "no-store" }).then((r) => {
+      if (!r.ok) throw new Error("no está vault.json");
+      return r.json();
+    });
+    const enc = new TextEncoder();
+    const material = await crypto.subtle.importKey("raw", enc.encode(user + "\0" + pass), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: b64(wrap.s), iterations: wrap.iter, hash: "SHA-256" },
+      material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(wrap.iv) }, key, b64(wrap.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+
+  const cpuMax = (r) => (r.cpu.length ? Math.max(...r.cpu.map((c) => c[1])) : null);
+  const cpuMed = (r) => {
+    if (!r.cpu.length) return null;
+    const s = r.cpu.map((c) => c[1]).sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)];
+  };
+  const okCount = (r) => r.calls.filter((c) => c.outcome === "ok").length;
+
+  function renderRuns(selId) {
+    const head = `<tr><th>Corrida</th><th>Fecha</th><th>Agente</th><th class="num">Llamadas</th><th class="num">Ramp</th>
+      <th class="num">ok</th><th class="num">Turno p50</th><th class="num">Turno p95</th><th class="num">Saludo p95</th><th class="num">CPU máx.</th></tr>`;
+    const rows = vault.corridas.map((r) => {
+      const s = r.summary, ok = okCount(r), n = r.calls.length;
+      return `<tr class="run${r.id === selId ? " sel" : ""}" data-id="${esc(r.id)}">
+        <td>${r.destacada ? '<span class="star">★</span> ' : ""}${esc(r.titulo)}</td>
+        <td>${esc(r.fecha)}</td><td>${esc(r.agente)}</td>
+        <td class="num">${n}</td><td class="num">${fmt(r.args.ramp, 1)} s</td>
+        <td class="num ${ok === n ? "good" : "bad"}">${ok}/${n}</td>
+        <td class="num">${sec(s.turn_latency_s.p50)}</td>
+        <td class="num ${cls(s.turn_latency_s.p95, TARGET, 3.5)}">${sec(s.turn_latency_s.p95)}</td>
+        <td class="num ${cls(s.greeting_s.p95, 2, 5)}">${sec(s.greeting_s.p95)}</td>
+        <td class="num ${cls(cpuMax(r), CPU_LIMIT - 10, CPU_LIMIT)}">${cpuMax(r) == null ? "—" : cpuMax(r) + " %"}</td></tr>`;
+    }).join("");
+    $("runs").innerHTML = head + rows;
+    $("runs").querySelectorAll("tr.run").forEach((tr) =>
+      tr.addEventListener("click", () => { location.hash = tr.dataset.id; }));
+  }
+
+  // ---- charts (inline SVG)
+  function axes(W, H, P, yMax, yTicks, ySuffix) {
+    let g = "";
+    yTicks.forEach((t) => {
+      const y = H - P.b - (t / yMax) * (H - P.t - P.b);
+      g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}" stroke="var(--grid)"/>`;
+      g += `<text x="${P.l - 6}" y="${y + 4}" text-anchor="end">${String(t).replace(".", ",")}${ySuffix}</text>`;
+    });
+    return g;
+  }
+
+  function cpuChart(r) {
+    if (!r.cpu.length) return '<div class="muted small">Sin registro de CPU para esta corrida.</div>';
+    const W = 560, H = 230, P = { l: 40, r: 12, t: 12, b: 28 };
+    const tMax = Math.max(r.cpu[r.cpu.length - 1][0], 1);
+    const x = (t) => P.l + (t / tMax) * (W - P.l - P.r);
+    const y = (v) => H - P.b - (v / 100) * (H - P.t - P.b);
+    const pts = r.cpu.map((c) => `${x(c[0]).toFixed(1)},${y(c[1]).toFixed(1)}`).join(" ");
+    let xt = "";
+    const step = tMax > 120 ? 30 : 15;
+    for (let t = 0; t <= tMax; t += step) xt += `<text x="${x(t)}" y="${H - 8}" text-anchor="middle">${t}s</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="CPU de la máquina del agente">
+      ${axes(W, H, P, 100, [0, 25, 50, 75, 100], "%")}
+      <line x1="${P.l}" x2="${W - P.r}" y1="${y(CPU_LIMIT)}" y2="${y(CPU_LIMIT)}" stroke="var(--bad)" stroke-dasharray="5 4"/>
+      <text x="${W - P.r}" y="${y(CPU_LIMIT) - 5}" text-anchor="end" style="fill:var(--bad)">tope del worker 70%</text>
+      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      ${xt}</svg>`;
+  }
+
+  function turnChart(r) {
+    const W = 560, H = 230, P = { l: 40, r: 12, t: 12, b: 28 };
+    const all = r.calls.flatMap((c) => c.turn_latencies_s);
+    const greet = r.calls.map((c) => c.greeting_s).filter((v) => v != null);
+    const yMax = Math.max(4, Math.ceil(Math.max(TARGET, ...all, 0) + 0.5));
+    const n = r.calls.length;
+    const x = (i) => P.l + ((i + 0.5) / n) * (W - P.l - P.r);
+    const y = (v) => H - P.b - (Math.min(v, yMax) / yMax) * (H - P.t - P.b);
+    let dots = "";
+    r.calls.forEach((c, i) => {
+      c.turn_latencies_s.forEach((v, k) => {
+        dots += `<circle cx="${(x(i) + (k - 1) * 2).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="var(--dot)" fill-opacity=".75"><title>Llamada ${c.n}, turno ${k + 1}: ${fmt(v)} s</title></circle>`;
+      });
+      if (c.outcome !== "ok") dots += `<text x="${x(i)}" y="${H - P.b - 4}" text-anchor="middle" style="fill:var(--bad);font-weight:700">×</text>`;
+    });
+    const ticks = []; for (let t = 0; t <= yMax; t += 1) ticks.push(t);
+    let xt = ""; const every = n > 30 ? 10 : 5;
+    r.calls.forEach((c, i) => { if (c.n === 1 || c.n % every === 0) xt += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${c.n}</text>`; });
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Latencia de cada turno por llamada">
+      ${axes(W, H, P, yMax, ticks, "s")}
+      <line x1="${P.l}" x2="${W - P.r}" y1="${y(TARGET)}" y2="${y(TARGET)}" stroke="var(--warn)" stroke-dasharray="5 4"/>
+      <text x="${W - P.r}" y="${y(TARGET) - 5}" text-anchor="end" style="fill:var(--warn)">objetivo 2,5 s</text>
+      ${dots}${xt}</svg>`;
+  }
+
+  function greetChart(r) {
+    const W = 1120, H = 200, P = { l: 40, r: 12, t: 12, b: 28 };
+    const vals = r.calls.map((c) => c.greeting_s);
+    const subs = r.calls.map((c) => c.subscribed_s);
+    const yMax = Math.max(2, Math.ceil(Math.max(...vals.filter((v) => v != null), 0)));
+    const n = r.calls.length, bw = (W - P.l - P.r) / n;
+    const y = (v) => H - P.b - (Math.min(v, yMax) / yMax) * (H - P.t - P.b);
+    let bars = "";
+    r.calls.forEach((c, i) => {
+      const x0 = P.l + i * bw + bw * 0.15, w = Math.max(bw * 0.7, 1);
+      if (c.greeting_s == null) {
+        bars += `<text x="${x0 + w / 2}" y="${H - P.b - 4}" text-anchor="middle" style="fill:var(--bad);font-weight:700">×</text>`;
+        return;
+      }
+      bars += `<rect x="${x0.toFixed(1)}" y="${y(c.greeting_s).toFixed(1)}" width="${w.toFixed(1)}" height="${(H - P.b - y(c.greeting_s)).toFixed(1)}" fill="var(--dot)" fill-opacity=".8"><title>Llamada ${c.n}: saludo ${fmt(c.greeting_s)} s${c.subscribed_s != null ? ", audio conectado " + fmt(c.subscribed_s) + " s" : ""}</title></rect>`;
+      if (c.subscribed_s != null) bars += `<line x1="${x0}" x2="${x0 + w}" y1="${y(c.subscribed_s)}" y2="${y(c.subscribed_s)}" stroke="var(--dot2)" stroke-width="2"/>`;
+    });
+    const ticks = []; const st = yMax > 10 ? 5 : yMax > 4 ? 2 : 1; for (let t = 0; t <= yMax; t += st) ticks.push(t);
+    let xt = ""; const every = n > 30 ? 10 : 5;
+    r.calls.forEach((c, i) => { if (c.n === 1 || c.n % every === 0) xt += `<text x="${P.l + (i + 0.5) * bw}" y="${H - 8}" text-anchor="middle">${c.n}</text>`; });
+    const hasSubs = subs.some((v) => v != null);
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tiempo hasta el saludo por llamada">
+      ${axes(W, H, P, yMax, ticks, "s")}${bars}${xt}</svg>
+      <div class="legend"><span><i style="background:var(--dot)"></i>saludo</span>${hasSubs ? '<span><i class="line" style="background:var(--dot2)"></i>audio conectado</span>' : ""}<span><b class="bad">×</b> sin saludo</span></div>`;
+  }
+
+  function renderDetail(r) {
+    const s = r.summary, ok = okCount(r), n = r.calls.length;
+    const fails = r.calls.filter((c) => c.outcome !== "ok");
+    const outcomes = Object.entries(s.outcomes).map(([k, v]) =>
+      `<span class="pill ${k === "ok" ? "ok" : "fail"}">${esc(k)} · ${v}</span>`).join(" ");
+    const kpi = (v, l, c = "") => `<div class="kpi"><div class="v ${c}">${v}</div><div class="l">${l}</div></div>`;
+    const rows = r.calls.map((c) => `<tr><td class="num">${c.n}</td><td>${esc(c.scenario)}</td>
+      <td><span class="pill ${c.outcome === "ok" ? "ok" : "fail"}">${esc(c.outcome)}</span></td>
+      <td class="num">${sec(c.greeting_s)}</td><td class="num">${sec(c.subscribed_s)}</td>
+      <td class="num">${c.turn_latencies_s.map((v) => fmt(v)).join(" · ") || "—"}</td><td class="num">${sec(c.duration_s)}</td></tr>`).join("");
+    $("detail").innerHTML = `
+      <h2>${r.destacada ? '<span class="star">★</span> ' : ""}${esc(r.titulo)}</h2>
+      <div class="meta"><span>Corrida <b>${esc(r.id)}</b></span><span>Fecha <b>${esc(r.fecha)}</b></span>
+        <span>Agente <b>${esc(r.agente)}</b></span><span>Robot <b>${esc(r.robot)}</b></span>
+        <span>Configuración <b>${esc(r.config)}</b></span><span>Guion <b>${esc(r.args.scenario)}</b></span>
+        <span>Ramp <b>${fmt(r.args.ramp, 1)} s</b></span><span>Duración <b>${fmt(s.wall_s, 0)} s</b></span></div>
+      ${r.nota ? `<div class="note">${esc(r.nota)}</div>` : ""}
+      <div class="kpis" style="margin-top:14px">
+        ${kpi(`${ok}/${n}`, "llamadas ok", ok === n ? "good" : "bad")}
+        ${kpi(sec(s.turn_latency_s.p50), "turno p50")}
+        ${kpi(sec(s.turn_latency_s.p95), "turno p95", cls(s.turn_latency_s.p95, TARGET, 3.5))}
+        ${kpi(sec(s.greeting_s.p50), "saludo p50")}
+        ${kpi(sec(s.greeting_s.p95), "saludo p95", cls(s.greeting_s.p95, 2, 5))}
+        ${kpi(cpuMax(r) == null ? "—" : `${cpuMed(r)} / ${cpuMax(r)} %`, "CPU agente mediana / máx.", cls(cpuMax(r), CPU_LIMIT - 10, CPU_LIMIT))}
+        ${kpi(String(s.expected_cases), "casos creados (esperados)")}
+      </div>
+      <div style="margin-top:10px">${outcomes}</div>
+      <div class="grid2" style="margin-top:18px">
+        <div><h2>Latencia de cada turno</h2>${turnChart(r)}
+          <div class="legend"><span><i style="background:var(--dot)"></i>un turno (3 por llamada)</span><span><b class="bad">×</b> llamada fallida</span></div></div>
+        <div><h2>CPU de la máquina del agente</h2>${cpuChart(r)}</div>
+      </div>
+      <div style="margin-top:18px"><h2>Saludo por llamada</h2>${greetChart(r)}</div>
+      ${fails.length ? `<div style="margin-top:14px" class="small"><b class="bad">Fallidas:</b> ${fails.map((c) => `#${c.n} (${esc(c.outcome)})`).join(", ")}</div>` : ""}
+      <details><summary>Ver las ${n} llamadas</summary>
+        <div class="tablewrap" style="margin-top:8px"><table>
+          <tr><th class="num">#</th><th>Guion</th><th>Resultado</th><th class="num">Saludo</th><th class="num">Audio conectado</th><th class="num">Turnos</th><th class="num">Duración</th></tr>
+          ${rows}</table></div></details>`;
+  }
+
+  function route() {
+    if (!vault) return;
+    const want = decodeURIComponent((location.hash || "").slice(1));
+    const r = vault.corridas.find((c) => c.id === want) || vault.corridas.find((c) => c.destacada) || vault.corridas[vault.corridas.length - 1];
+    renderRuns(r.id);
+    renderDetail(r);
+  }
+
+  function show() {
+    $("login").classList.add("hidden");
+    $("app").classList.remove("hidden");
+    $("title").textContent = vault.proyecto;
+    $("goal").textContent = "Objetivo: " + vault.objetivo;
+    $("gen").textContent = "Datos generados: " + vault.generado;
+    $("concl").innerHTML = vault.conclusiones.map((c) => `<li>${esc(c)}</li>`).join("");
+    route();
+  }
+
+  $("login").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    $("err").textContent = ""; $("go").disabled = true; $("go").textContent = "Descifrando…";
+    try {
+      vault = await unlock($("user").value.trim(), $("pass").value);
+      $("pass").value = "";
+      show();
+    } catch (e) {
+      $("err").textContent = e && e.message === "no está vault.json" ? "No se encontró el archivo de datos." : "Usuario o contraseña incorrectos.";
+    } finally {
+      $("go").disabled = false; $("go").textContent = "Entrar";
+    }
+  });
+  window.addEventListener("hashchange", route);
+})();
+</script>
+</body>
+</html>
